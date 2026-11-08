@@ -1,6 +1,8 @@
+const approval = require("../../includes/approval");
+
 module.exports.config = {
   name: "pending",
-  version: "1.1.0",
+  version: "1.3.0",
   credits: "𝐌𝐑 𝐉𝐔𝐖𝐄𝐋",
   hasPermssion: 2,
   description: "Manage bot's pending group requests",
@@ -52,6 +54,53 @@ function isAdmin(senderID) {
   return global.config.ADMINBOT.includes(senderID);
 }
 
+// ===================================================
+// ✅ অনুমোদনের পর: নোটিশ ১ + বটের নিকনেম (config.json এর BOTNAME) + নোটিশ ২
+// ===================================================
+async function welcomeGroup(api, groupID) {
+  const prefix = global.config.PREFIX || "/";
+
+  // config.json এর ADMINBOT এর ১ নাম্বার UID থেকে ফেসবুক লিংক
+  const ownerUID = String((global.config.ADMINBOT || [])[0] || "");
+  const fbLink = ownerUID ? `https://www.facebook.com/${ownerUID}` : "N/A";
+
+  // 🔥 NOTI BOX 1
+  await api.sendMessage(
+    `চ্ঁলে্ঁ এ্ঁসে্ঁছি্ঁ ⎯꯭𓆩꯭𝆺𝅥😻⃞𝐑⃞𝐈⃞𝐘⃞𝐀⃞༢࿐ এঁখঁনঁ তোঁমাঁদেঁরঁ সাঁথেঁ আঁড্ডাঁ দিঁবঁ..!😘`,
+    groupID
+  );
+
+  // 🔥 বটের নিকনেম সেট (config.json এর BOTNAME)
+  try {
+    const botName = global.config.BOTNAME;
+    if (botName) {
+      await api.changeNickname(botName, groupID, api.getCurrentUserID());
+    }
+  } catch (e) {}
+
+  await new Promise(r => setTimeout(r, 800));
+
+  // 🔥 NOTI BOX 2
+  await api.sendMessage(
+`┏━━━━━━━━━━━━━━━━━┓
+┃  🤖 𝐁𝐎𝐓 𝐀𝐂𝐓𝐈𝐕𝐄 ✅
+┣━━━━━━━━━━━━━━━━━┫
+┃ 🌸 আসসালামু আলাইকুম
+┃ ধন্যবাদ আমাকে অ্যাড করার জন্য!
+┣━━━━━━━━━━━━━━━━━┫
+┃ 📜 ${prefix}help  ➜ কমান্ড লিস্ট
+┃ ℹ️ ${prefix}info  ➜ বটের তথ্য
+┃ 👑 ${prefix}admin ➜ অ্যাডমিন
+┣━━━━━━━━━━━━━━━━━┫
+┃ 💬 ${fbLink}
+┃ 📱 +8801943488192
+┣━━━━━━━━━━━━━━━━━┫
+┃ 👑 乛 M𝆠፝֟R ཐི༏ཋྀ JU𝆠፝֟W𝆠፝֟ELꜛཐི༏ཋྀ࿐
+┗━━━━━━━━━━━━━━━━━┛`,
+    groupID
+  );
+}
+
 module.exports.handleReply = async function({ api, event, handleReply, getText }) {
   if (String(event.senderID) !== String(handleReply.author)) return;
 
@@ -73,6 +122,7 @@ module.exports.handleReply = async function({ api, event, handleReply, getText }
       }
 
       try {
+        approval.remove(handleReply.pending[index - 1].threadID);
         await api.removeUserFromGroup(api.getCurrentUserID(), handleReply.pending[index - 1].threadID);
         count++;
       } catch (e) {}
@@ -94,27 +144,11 @@ module.exports.handleReply = async function({ api, event, handleReply, getText }
       try {
         const groupID = handleReply.pending[index - 1].threadID;
 
-        // 🔥 NOTI BOX 1 (UNCHANGED)
-        await api.sendMessage(`চ্ঁলে্ঁ এ্ঁসে্ঁছি্ঁ ⎯꯭𓆩꯭𝆺𝅥😻⃞𝐑⃞𝐈⃞𝐘⃞𝐀⃞༢࿐ এঁখঁনঁ তোঁমাঁদেঁরঁ সাঁথেঁ আঁড্ডাঁ দিঁবঁ..!😘`, groupID);
+        // অনুমোদন তালিকায় যোগ (এখন থেকে বট এই গ্রুপে সক্রিয়)
+        approval.approve(groupID, event.senderID);
 
-        // 🔥 NOTI BOX 2 (UNCHANGED)
-        await api.sendMessage(`╭•┄┅═══❁🌺❁═══┅┄•╮
-আ্ঁস্ঁসা্ঁলা্ঁমু্ঁ💚আ্ঁলা্ঁই্ঁকু্ঁম্ঁ
-╰•┄┅═══❁🌺❁═══┅┄•╯
-
-𝐓𝐡𝐚𝐧𝐤 𝐲𝐨𝐮 𝐬𝐨 𝐦𝐮𝐜𝐡 𝐟𝐨𝐫 𝐚𝐝𝐝𝐢𝐧𝐠 𝐦𝐞 𝐭𝐨 𝐲𝐨𝐮𝐫 𝐠𝐫𝐨𝐮𝐩! 🖤🤗
-𝐈 𝐰𝐢𝐥𝐥 𝐚𝐥𝐰𝐚𝐲𝐬 𝐬𝐞𝐫𝐯𝐞 𝐲𝐨𝐮 𝐢𝐧𝐬𝐡𝐚𝐀𝐥𝐥𝐚𝐡 🌺❤️
-
-𝐂𝐨𝐦𝐦𝐚𝐧𝐝 𝐋𝐢𝐬𝐭:
-${global.config.PREFIX}help
-${global.config.PREFIX}info
-${global.config.PREFIX}admin
-
-➤ Messenger: mrjuwel999
-WhatsApp : +8801943488192
-
-❖⋆══════════════⋆❖
-𝐎𝐰𝐧𝐞𝐫➢ 𝐌𝐑 𝐉𝐔𝐖𝐄𝐋`, groupID);
+        // নোটিশ + নিকনেম
+        await welcomeGroup(api, groupID);
 
         count++;
       } catch (e) {}
@@ -124,11 +158,22 @@ WhatsApp : +8801943488192
   }
 };
 
-module.exports.run = async function({ api, event, getText }) {
+module.exports.run = async function({ api, event, args, getText }) {
   const { threadID, messageID, senderID } = event;
 
   if (!isAdmin(senderID)) {
     return api.sendMessage(getText("noPermission"), threadID, messageID);
+  }
+
+  // /pending <গ্রুপ আইডি> দিলে সরাসরি অনুমোদন
+  if (args && /^\d{8,}$/.test(args[0] || "")) {
+    try {
+      approval.approve(args[0], senderID);
+      await welcomeGroup(api, args[0]);
+      return api.sendMessage(`✅ ${args[0]} গ্রুপ অনুমোদিত হয়েছে।`, threadID, messageID);
+    } catch (e) {
+      return api.sendMessage(`⚠️ ${args[0]} অনুমোদিত হয়েছে, কিন্তু গ্রুপে মেসেজ পাঠানো যায়নি।`, threadID, messageID);
+    }
   }
 
   try {
