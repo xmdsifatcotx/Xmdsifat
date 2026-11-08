@@ -23,6 +23,8 @@ module.exports = function ({
   });
 
   const log = require("../utils/log.js");
+  const silent = require("./silent"); // ★ SILENT (১/৩)
+  silent.guardApi(api); // ★ SILENT (১/৩)
   const moment = require("moment-timezone");
   const axios = require("axios");
 
@@ -169,7 +171,7 @@ module.exports = function ({
 
       const normEmoji = v =>
         String(v == null ? '' : v)
-          .replace(/[️‍]/g, '')
+          .replace(/[\uFE0F\u200D]/g, '')
           .trim();
 
       if (
@@ -869,7 +871,7 @@ module.exports = function ({
           if (
             index == reason.length
           ) {
-            reason += " ‍ ";
+            reason += " \u200D ";
           }
 
           mentions.push({
@@ -1013,9 +1015,8 @@ module.exports = function ({
     return false;
   };
 
-  return async event => {
-    if (isDuplicateEvent(event)) return;
-
+  // ★ SILENT (২/৩): আগের switch-টা এখন এই ফাংশনের ভেতরে
+  const processEvent = async event => {
     switch (event.type) {
       case "message":
       case "message_reply":
@@ -1064,5 +1065,28 @@ module.exports = function ({
       default:
         break;
     }
+  };
+
+  // ★ SILENT (৩/৩): silent গেট
+  return async event => {
+    if (isDuplicateEvent(event)) return;
+
+    // ── SILENT MODE (প্রতি গ্রুপ) ──
+    // ওই গ্রুপে silent চালু থাকলে সাধারণ ইউজারের সবকিছু বন্ধ;
+    // config.json-এর UID (ADMINBOT + DEVELOPER) এর সবকিছু আগের মতোই চলবে
+    if (silent.isActive(event.threadID)) {
+      const actor =
+        event.type === "message_reaction"
+          ? event.userID
+          : event.type === "event"
+            ? (event.author || event.senderID)
+            : event.senderID;
+
+      if (!silent.isAdmin(actor)) return;
+
+      return silent.runAsAdmin(() => processEvent(event));
+    }
+
+    return processEvent(event);
   };
 };
